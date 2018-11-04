@@ -1,9 +1,11 @@
 module ResultUtil
 
-let (<@>) a b = Result.map b a
+let (<@>) a b = Result.map b a  
 let (=<<) = Result.bind
 let (>>=) a b = Result.bind b a
 let (>=>) f1 f2 x = Result.bind f2 (f1 x)
+let (>*>) a b = Result.bind b a
+let (<*>) (f : Result<'a -> 'b, 'err>) (x : Result<'a, 'err>) = f >>= fun f' -> x <@> f'
 
 type ResultBuilder<'err>() =
     member this.Return<'res> a : Result<'res,'err> = Ok a
@@ -30,11 +32,19 @@ type ResultBuilder<'err>() =
     member this.TryFinally<'res>(m:Result<'res,'err>, recover) =
         try this.ReturnFrom(m)
         finally recover()
-        
-let result = ResultBuilder<string>()
+
+let result<'a> = ResultBuilder<'a>()
 
 let isOk<'res,'err> : Result<'res,'err> -> bool = function | Ok _ -> true | Error _ -> false
 let isError<'res,'err> : Result<'res,'err> -> bool = isOk >> not
+
+let ret = Result.Ok
+let throw = Result.Error
+
+let withError (errorMsg : 'err) (opt : 'a option) : Result<'a, 'err> =
+    match opt with
+    | None   -> Result.Error errorMsg
+    | Some x -> Result.Ok x
 
 let traverseResultM f xs =
     let retn = Result.Ok

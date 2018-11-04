@@ -18,8 +18,16 @@ let ERR_MSG_INVALID_VIEW_FILE =
 let MSG_GENERATED_CONTRACT_TO_FILE : Printf.TextWriterFormat<string -> unit,unit> =
     "Generated contract to file:\n%s" 
 let MSG_EXTRACTED_VIEW_TO_FILE : Printf.TextWriterFormat<string -> unit,unit> =
-    "Extracted view to file:\n%s" 
+    "Extracted view to file:\n%s"
 
+type Error =
+    | Unspecified_Contract 
+    | File_Not_Found       of filename:string
+    | Parsing_Failed       of filename:string
+    | Invalid_View_File
+    | Usage                of message:string
+
+type ProgramResult<'a> = Result<'a, Error>
 
 type CLIArg =
     | [<CliPrefix(CliPrefix.None)>]
@@ -81,51 +89,51 @@ let extract_parser  = ArgumentParser.Create<ExtractArgs>()
 let modify_parser   = ArgumentParser.Create<ModifyArgs>()
 let generate_parser = ArgumentParser.Create<GenerateArgs>()
 
-let cli_usage()      = cli_parser.PrintUsage()
-let extract_usage()  = extract_parser.PrintUsage()
-let modify_usage()   = modify_parser.PrintUsage() 
-let generate_usage() = generate_parser.PrintUsage()
+let cli_usage()      = Usage <| cli_parser.PrintUsage()
+let extract_usage()  = Usage <| extract_parser.PrintUsage()
+let modify_usage()   = Usage <| modify_parser.PrintUsage() 
+let generate_usage() = Usage <| generate_parser.PrintUsage()
 
-let with_file (filename : string) : Result<unit, string> =
+let with_file (filename : string) : ProgramResult<unit> =
      if System.IO.File.Exists filename
-        then Result.Ok()
-        else Result.Error <| sprintf ERR_MSG_FILE_NOT_FOUND filename
+        then Result.Ok ()
+        else Result.Error <| File_Not_Found(filename)
 
-let try_parse (filename : string) : Result<ASTUtils.AST, string> =
+let try_parse (filename : string) : ProgramResult<ASTUtils.AST> =
     try 
         Result.Ok <| ASTUtils.parse_file filename
     with _ ->
-        Result.Error <| sprintf ERR_MSG_PARSING_FAILED filename
+        Result.Error <| Parsing_Failed(filename)
 
-let handle_extract_args (args : ParseResults<ExtractArgs>) : Result<unit, string> =
+let handle_extract_args (args : ParseResults<ExtractArgs>) : ProgramResult<unit> =
     if args.GetAllResults() |> List.isEmpty
         then
             Result.Error <| extract_usage()
         else
             match args.TryGetResult ExtractArgs.Source_file with
             | None ->
-                Result.Error ERR_MSG_UNSPECIFIED_CONTRACT
+                throw Unspecified_Contract
             | Some src_filename ->
-                with_file src_filename >>= fun() ->
-                result {
-                    let  filename      = System.IO.Path.GetFileName src_filename
-                    let  contract_name = System.IO.Path.GetFileNameWithoutExtension src_filename
-                    let! ast           = try_parse src_filename
-                    let  viewfile      = ViewFile.extractViewFile filename contract_name ast
-                    let  json          = ViewFile.renderViewFile viewfile
-                    return
-                        match args.TryGetResult ExtractArgs.V with
-                        | None ->
-                            printfn "%s" json
-                        | Some view_filename ->
-                            System.IO.File.WriteAllText(view_filename, json)
-                            printfn MSG_EXTRACTED_VIEW_TO_FILE view_filename 
-                }
+                with_file src_filename >>=fun()-> 
+                    result {
+                        let  filename      = System.IO.Path.GetFileName src_filename
+                        let  contract_name = System.IO.Path.GetFileNameWithoutExtension src_filename
+                        let! ast           = try_parse src_filename
+                        let  viewfile      = ViewFile.extractViewFile filename contract_name ast
+                        let  json          = ViewFile.renderViewFile viewfile
+                        return
+                            match args.TryGetResult ExtractArgs.V with
+                            | None ->
+                                printfn "%s" json
+                            | Some view_filename ->
+                                System.IO.File.WriteAllText(view_filename, json)
+                                printfn MSG_EXTRACTED_VIEW_TO_FILE view_filename
+                    }
 
-let handle_modify_args (args : ParseResults<ModifyArgs>) : Result<unit, string> =
-    Result.Error "TODO : Implement modify"
+let handle_modify_args (args : ParseResults<ModifyArgs>) : ProgramResult<unit> =
+    failwithf "Not implemented yet."
 
-let handle_generate_args (args : ParseResults<GenerateArgs>) : Result<unit, string> =
+let handle_generate_args (args : ParseResults<GenerateArgs>) : ProgramResult<unit> =
     if args.GetAllResults() |> List.isEmpty
         then
             Result.Error <| generate_usage()
@@ -136,58 +144,64 @@ let handle_generate_args (args : ParseResults<GenerateArgs>) : Result<unit, stri
                     | None ->
                         Result.Ok <| System.Console.ReadLine()
                     | Some view_filename ->
-                        with_file view_filename >>= fun() ->
-                        Result.Ok <| System.IO.File.ReadAllText view_filename
+                        with_file view_filename >>=fun()->
+                            Result.Ok <| System.IO.File.ReadAllText view_filename
                 
-                let! vf =
-                    match parseViewFile content with
-                    | None ->
-                        Result.Error ERR_MSG_INVALID_VIEW_FILE 
-                    | Some vf ->
-                        Result.Ok vf
-                
+                let! viewfile =
+                    parseViewFile content
+                    |> withError Invalid_View_File
+                    
                 let! src_filename =
-                    match args.TryGetResult GenerateArgs.Source_file with
-                    | None ->
-                        Result.Error ERR_MSG_UNSPECIFIED_CONTRACT
-                    | Some src_filename ->
-                        Result.Ok src_filename
+                    args.TryGetResult GenerateArgs.Source_file
+                    |> withError Unspecified_Contract
                 
                 let! src_ast =
-                    with_file src_filename >>= fun() -> try_parse src_filename
+                    with_file src_filename >>=fun()-> try_parse src_filename
                 
-                let pars = vf._parameters
+                let parameters = viewfile._parameters
                 
                 let dst_ast =
-                    List.fold  modify_AST src_ast pars
+                    List.fold modify_AST src_ast parameters
                     
-                let dst_filename = vf._filename
+                let dst_filename = viewfile._filename
                 
                 return
                     System.IO.File.WriteAllText(dst_filename, ASTUtils.ast_to_string dst_ast);
                     printfn MSG_GENERATED_CONTRACT_TO_FILE dst_filename
             }
 
-let handle_cli_arg (arg : CLIArg) : Result<unit, string> =
+let handle_cli_arg (arg : CLIArg) : ProgramResult<unit> =
     match arg with
     | Extract(args)  -> handle_extract_args  args
     | Modify(args)   -> handle_modify_args   args
     | Generate(args) -> handle_generate_args args
 
-let handle_cli_args = List.fold (fun r hd -> r >>= fun() -> handle_cli_arg hd) (Ok ())
+let handle_cli_args = List.fold (fun r hd -> r >>=fun()-> handle_cli_arg hd) (Ok ())
 
 [<EntryPoint>]
 let main argv =
     if Array.isEmpty argv then printfn "%s" (cli_parser.PrintUsage())
     try
         let results = cli_parser.ParseCommandLine(inputs = argv, raiseOnUsage = true)
-        let args = results.GetAllResults()
+        let args    = results.GetAllResults()
         match handle_cli_args args with 
-        | Result.Ok cws ->
+        | Result.Ok () ->
             0
         | Result.Error err ->
-             printfn "%s" err
-             1
+            let errorMsg = 
+                match err with
+                | Unspecified_Contract ->
+                    ERR_MSG_UNSPECIFIED_CONTRACT
+                | File_Not_Found(filename) ->
+                    sprintf ERR_MSG_FILE_NOT_FOUND filename
+                | Parsing_Failed(filename) ->
+                    sprintf ERR_MSG_PARSING_FAILED filename
+                | Invalid_View_File ->
+                    ERR_MSG_INVALID_VIEW_FILE
+                | Usage msg ->
+                    msg
+            eprintfn "%s" errorMsg
+            1
     with e ->
         printfn "%s" e.Message
         1
