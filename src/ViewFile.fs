@@ -27,8 +27,7 @@ let TYPE_UINT16 = "uint16"
 let TYPE_UINT32 = "uint32"
 let TYPE_UINT64 = "uint64"
 
-let FMT_INT : Printf.StringFormat<(string -> string -> string)> =
-    "%sint%s"
+let FMT_INT      = "%sint%s" : Printf.StringFormat<(string -> string -> string)>
 let FMT_UNSIGNED = "u"
 let FMT_SIGNED   = ""
 
@@ -106,7 +105,7 @@ let private renderList (renderer : 'a -> string) (ls : 'a list) : string =
 
 let private renderParameter (param : Parameter) : string =
     let name_field  = sprintf "\"%s\" : \"%s\"" KEY_NAME  param._name
-    let value_field = sprintf "\"%s\" : %s" KEY_VALUE param._value
+    let value_field = sprintf "\"%s\" : %s"     KEY_VALUE param._value
     let type_field  = sprintf "\"%s\" : \"%s\"" KEY_TYPE  param._type
     sprintf "{ %s, %s, %s }" name_field value_field type_field
 
@@ -123,37 +122,38 @@ let private parseParameter (jv : JsonValue) : (string * paramsdata) option =
     let _type  = jv.GetProperty(KEY_TYPE).AsString() 
     let _value = (jv?value).AsString()
     Option.map (fun _value -> _name, _value ) <|
-    match _type with
-    | t when t = TYPE_BOOL ->
-        try
-            Some <| CD_bool((jv?value).AsBoolean())
-        with _ -> None
-    | t when t = TYPE_CHAR ->
-        if _value.Length = 1
-            then Some <| CD_char(_value.Chars(0))
-            else None
-    | t when t = TYPE_STRING ->
-        Some <| CD_string(_value)
-    | t when t = TYPE_INT ->
-        Some <| CD_int(_value, None)
-    | t when t = TYPE_INT8 ->
-        Some <| CD_int(_value, Some(Const.Signed, Const.Int8))
-    | t when t = TYPE_INT16 ->
-        Some <| CD_int(_value, Some(Const.Signed, Const.Int16))
-    | t when t = TYPE_INT32 ->
-        Some <| CD_int(_value, Some(Const.Signed, Const.Int32))
-    | t when t = TYPE_INT64 ->
-        Some <| CD_int(_value, Some(Const.Signed, Const.Int64))
-    | t when t = TYPE_UINT8 ->
-        Some <| CD_int(_value, Some(Const.Unsigned, Const.Int8))
-    | t when t = TYPE_UINT16 ->
-        Some <| CD_int(_value, Some(Const.Unsigned, Const.Int16))
-    | t when t = TYPE_UINT32 ->
-        Some <| CD_int(_value, Some(Const.Unsigned, Const.Int32))
-    | t when t = TYPE_UINT64 ->
-        Some <| CD_int(_value, Some(Const.Unsigned, Const.Int64))
-    | _ ->
-        None
+        match _type with
+        | t when t = TYPE_BOOL ->
+            try
+                Some <| CD_bool((jv?value).AsBoolean())
+            with _ ->
+                None
+        | t when t = TYPE_CHAR ->
+            if _value.Length = 1
+                then Some <| CD_char(_value.Chars(0))
+                else None
+        | t when t = TYPE_STRING ->
+            Some <| CD_string(_value)
+        | t when t = TYPE_INT ->
+            Some <| CD_int(_value, None)
+        | t when t = TYPE_INT8 ->
+            Some <| CD_int(_value, Some(Const.Signed, Const.Int8))
+        | t when t = TYPE_INT16 ->
+            Some <| CD_int(_value, Some(Const.Signed, Const.Int16))
+        | t when t = TYPE_INT32 ->
+            Some <| CD_int(_value, Some(Const.Signed, Const.Int32))
+        | t when t = TYPE_INT64 ->
+            Some <| CD_int(_value, Some(Const.Signed, Const.Int64))
+        | t when t = TYPE_UINT8 ->
+            Some <| CD_int(_value, Some(Const.Unsigned, Const.Int8))
+        | t when t = TYPE_UINT16 ->
+            Some <| CD_int(_value, Some(Const.Unsigned, Const.Int16))
+        | t when t = TYPE_UINT32 ->
+            Some <| CD_int(_value, Some(Const.Unsigned, Const.Int32))
+        | t when t = TYPE_UINT64 ->
+            Some <| CD_int(_value, Some(Const.Unsigned, Const.Int64))
+        | _ ->
+            None
 
 let parseViewFile (json : string) : ViewFile<string * paramsdata> option =
     let jv = JsonValue.Parse json
