@@ -50,7 +50,7 @@ type ViewFile<'a> = {
 
 
 
-let private paramsdata2valuetype (x : paramsdata) : string * string = 
+let paramsdata2valuetype (x : paramsdata) : string * string = 
     match x with
     | CD_bool(b) ->
         ( match b with

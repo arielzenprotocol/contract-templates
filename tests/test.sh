@@ -32,4 +32,7 @@ testMsg "Testing extracting invalid contract"
 testMsg "Testing generating view file not found"
 ( set x ; $PROGRAM generate Bet.fst -v Notfound.json )
 
+testMsg "Testing invalid parameter type"
+sed -i 's/uint64/uint32/g' $VIEWFILE
+( set x ; $PROGRAM generate Bet.fst -v Bet.json )
 

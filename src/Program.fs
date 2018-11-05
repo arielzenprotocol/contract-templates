@@ -14,6 +14,8 @@ let ERR_MSG_PARSING_FAILED : Printf.StringFormat<string -> string,string> =
     "Error - Parsing failed for file:\n%s"
 let ERR_MSG_INVALID_VIEW_FILE =
     "Error - Invalid view file"
+let ERR_MSG_MODIFICATION_TYPE : Printf.StringFormat<string -> string,string> =
+    "Error - Incompatibility between the type of a parameter in the contract and in the view file.\nParameter: %s"
 
 let MSG_GENERATED_CONTRACT_TO_FILE : Printf.TextWriterFormat<string -> unit,unit> =
     "Generated contract to file:\n%s" 
@@ -26,6 +28,7 @@ type Error =
     | Parsing_Failed       of filename:string
     | Invalid_View_File
     | Usage                of message:string
+    | Modification_Error   of string * Modification_Error
 
 type ProgramResult<'a> = Result<'a, Error>
 
@@ -160,8 +163,12 @@ let handle_generate_args (args : ParseResults<GenerateArgs>) : ProgramResult<uni
                 
                 let parameters = viewfile._parameters
                 
-                let dst_ast =
-                    List.fold modify_AST src_ast parameters
+                let! dst_ast =
+                    match foldM modify_AST src_ast parameters with
+                    | Result.Ok ast ->
+                        Result.Ok ast
+                    | Result.Error(name, err) ->
+                        Result.Error <| Modification_Error(name, err) 
                     
                 let dst_filename = viewfile._filename
                 
@@ -198,6 +205,8 @@ let main argv =
                     sprintf ERR_MSG_PARSING_FAILED filename
                 | Invalid_View_File ->
                     ERR_MSG_INVALID_VIEW_FILE
+                | Modification_Error(name, Modification_Type(_, _)) ->
+                    sprintf ERR_MSG_MODIFICATION_TYPE name
                 | Usage msg ->
                     msg
             eprintfn "%s" errorMsg

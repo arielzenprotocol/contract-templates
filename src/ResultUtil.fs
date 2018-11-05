@@ -74,3 +74,8 @@ let sequenceResultM (xs:Result<'a,'err> list) : Result<'a list, 'err> =
 
 let sequenceResultA (xs:Result<'a,'err list> list) : Result<'a list, 'err list> =
     traverseResultA id xs
+    
+let rec foldM (folder:'s -> 'a -> Result<'s,'err>) (state:'s) (list:'a list) : Result<'s,'err> =
+    match list with
+    | [] -> ret state
+    | hd :: tl -> folder state hd >>= fun s -> foldM folder s tl

@@ -56,9 +56,9 @@
   <Import Project="$(FSharpTargetsPath)" Condition="Exists('$(FSharpTargetsPath)')" />
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="ResultUtil.fs" />
     <Compile Include="ParametersData.fs" />
     <Compile Include="ModifyAST.fs" />
-    <Compile Include="ResultUtil.fs" />
     <Compile Include="WitheredAST.fs" />
     <Compile Include="ExtractParams.fs" />
     <Compile Include="ViewFile.fs" />
