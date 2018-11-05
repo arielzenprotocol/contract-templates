@@ -32,15 +32,15 @@ type ProgramResult<'a> = Result<'a, Error>
 type CLIArg =
     | [<CliPrefix(CliPrefix.None)>]
         Extract of ParseResults<ExtractArgs>
-    | [<CliPrefix(CliPrefix.None)>]
-        Modify of ParseResults<ModifyArgs>
+//    | [<CliPrefix(CliPrefix.None)>]
+//        Modify of ParseResults<ModifyArgs>
     | [<CliPrefix(CliPrefix.None)>]
         Generate of ParseResults<GenerateArgs>
 with interface IArgParserTemplate with
         member this.Usage =
             match this with
             | Extract(_)      -> "Extract parameters from a file to a .json view file"
-            | Modify(_)       -> "Modify specific parameters in a file"
+//            | Modify(_)       -> "Modify specific parameters in a file"
             | Generate(_)     -> "Generate a new contract from a contract template (contract + view files)"
 
 and ExtractArgs =
@@ -55,19 +55,19 @@ with interface IArgParserTemplate with
             | V(_)           -> "Name of the view (.json) file to extract the parameters to.\n"
                               + "If this argument isn't specified the parameters will be printed to stdout"
 
-and ModifyArgs =
-    | [<Mandatory; CliPrefix(CliPrefix.Dash); AltCommandLine("--name")>]
-        N of name:string
-    | [<Mandatory; CliPrefix(CliPrefix.Dash); AltCommandLine("--value")>]
-        V of value:string
-    | [<MainCommand; ExactlyOnce>]
-        Filenames of source_filename:string * destination_filename:string 
-with interface IArgParserTemplate with
-        member this.Usage =
-            match this with
-            | Filenames(_,_) -> "Names of the source file and the generated file"
-            | N(_)           -> "Parameter name"
-            | V(_)           -> "Parameters value"
+//and ModifyArgs =
+//    | [<Mandatory; CliPrefix(CliPrefix.Dash); AltCommandLine("--name")>]
+//        N of name:string
+//    | [<Mandatory; CliPrefix(CliPrefix.Dash); AltCommandLine("--value")>]
+//        V of value:string
+//    | [<MainCommand; ExactlyOnce>]
+//        Filenames of source_filename:string * destination_filename:string 
+//with interface IArgParserTemplate with
+//        member this.Usage =
+//            match this with
+//            | Filenames(_,_) -> "Names of the source file and the generated file"
+//            | N(_)           -> "Parameter name"
+//            | V(_)           -> "Parameters value"
 
 and GenerateArgs =
     | [<MainCommand; ExactlyOnce>]
@@ -86,12 +86,12 @@ with interface IArgParserTemplate with
 
 let cli_parser      = ArgumentParser.Create<CLIArg>()
 let extract_parser  = ArgumentParser.Create<ExtractArgs>()
-let modify_parser   = ArgumentParser.Create<ModifyArgs>()
+//let modify_parser   = ArgumentParser.Create<ModifyArgs>()
 let generate_parser = ArgumentParser.Create<GenerateArgs>()
 
 let cli_usage()      = Usage <| cli_parser.PrintUsage()
 let extract_usage()  = Usage <| extract_parser.PrintUsage()
-let modify_usage()   = Usage <| modify_parser.PrintUsage() 
+//let modify_usage()   = Usage <| modify_parser.PrintUsage()
 let generate_usage() = Usage <| generate_parser.PrintUsage()
 
 let with_file (filename : string) : ProgramResult<unit> =
@@ -130,8 +130,8 @@ let handle_extract_args (args : ParseResults<ExtractArgs>) : ProgramResult<unit>
                                 printfn MSG_EXTRACTED_VIEW_TO_FILE view_filename
                     }
 
-let handle_modify_args (args : ParseResults<ModifyArgs>) : ProgramResult<unit> =
-    failwithf "Not implemented yet."
+//let handle_modify_args (args : ParseResults<ModifyArgs>) : ProgramResult<unit> =
+//    failwithf "Not implemented yet."
 
 let handle_generate_args (args : ParseResults<GenerateArgs>) : ProgramResult<unit> =
     if args.GetAllResults() |> List.isEmpty
@@ -173,7 +173,7 @@ let handle_generate_args (args : ParseResults<GenerateArgs>) : ProgramResult<uni
 let handle_cli_arg (arg : CLIArg) : ProgramResult<unit> =
     match arg with
     | Extract(args)  -> handle_extract_args  args
-    | Modify(args)   -> handle_modify_args   args
+//    | Modify(args)   -> handle_modify_args   args
     | Generate(args) -> handle_generate_args args
 
 let handle_cli_args = List.fold (fun r hd -> r >>=fun()-> handle_cli_arg hd) (Ok ())
