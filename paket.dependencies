@@ -9,3 +9,4 @@ nuget FSharp.Core 4.5.2
 nuget FSharp.Data 3.0.0
 nuget ZFStar 0.0.26
 nuget FSharpx.Extras
+nuget ZFS-Tools 0.0.24

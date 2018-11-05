@@ -56,7 +56,6 @@
   <Import Project="$(FSharpTargetsPath)" Condition="Exists('$(FSharpTargetsPath)')" />
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="ASTUtils.fs" />
     <Compile Include="ParametersData.fs" />
     <Compile Include="ModifyAST.fs" />
     <Compile Include="ResultUtil.fs" />
@@ -143,6 +142,17 @@
       <ItemGroup>
         <Reference Include="FSharpx.Extras">
           <HintPath>..\packages\FSharpx.Extras\lib\net45\FSharpx.Extras.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And $(TargetFrameworkVersion) == 'v4.7.1'">
+      <ItemGroup>
+        <Reference Include="ZFS_Tools">
+          <HintPath>..\packages\ZFS-Tools\lib\ZFS_Tools.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>
